@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: capstone-tracking-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: capstone_tracking
+      POSTGRES_USER: capstone_user
+      POSTGRES_PASSWORD: capstone_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - capstone_tracking_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U capstone_user -d capstone_tracking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: capstone-tracking-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/capstone_tracking
+      DB_USERNAME: capstone_user
+      DB_PASSWORD: capstone_pass
+      JWT_SECRET: ${JWT_SECRET:-change-this-dev-only-secret-key-please-override-in-prod-min-32-bytes}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      ALLOWED_EMAIL_DOMAIN: ${ALLOWED_EMAIL_DOMAIN:-fpt.edu.vn}
+    ports:
+      - "8080:8080"
+
+volumes:
+  capstone_tracking_data:
