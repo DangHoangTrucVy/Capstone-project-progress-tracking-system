@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -32,14 +34,17 @@ public class AuthService {
     private long accessTokenExpMinutes;
 
     @Value("${app.security.allowed-email-domain}")
-    private String allowedEmailDomain;
+    private String allowedEmailDomains;
 
     @Transactional
     public LoginResponse register(RegisterRequest request) {
         String email = request.email().toLowerCase();
 
-        if (!email.endsWith("@" + allowedEmailDomain)) {
-            throw new BadRequestException("Only @" + allowedEmailDomain + " accounts may self-register");
+        List<String> domains = List.of(allowedEmailDomains.split(","));
+        boolean domainAllowed = domains.stream().anyMatch(domain -> email.endsWith("@" + domain.trim()));
+        if (!domainAllowed) {
+            String allowedList = domains.stream().map(d -> "@" + d.trim()).reduce((a, b) -> a + ", " + b).orElse("");
+            throw new BadRequestException("Only " + allowedList + " accounts may self-register");
         }
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new ConflictException("A user with email " + email + " already exists");
