@@ -1,0 +1,107 @@
+package com.capstone.tracking.scheduling;
+
+import com.capstone.tracking.audit.AuditAction;
+import com.capstone.tracking.audit.AuditService;
+import com.capstone.tracking.common.exception.BadRequestException;
+import com.capstone.tracking.common.exception.ConflictException;
+import com.capstone.tracking.common.exception.ResourceNotFoundException;
+import com.capstone.tracking.group.StudentGroup;
+import com.capstone.tracking.group.StudentGroupService;
+import com.capstone.tracking.scheduling.dto.BookRequest;
+import com.capstone.tracking.scheduling.dto.CancelBookingRequest;
+import com.capstone.tracking.user.User;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Sprint 2 — API-003 / API-004, the highest-risk piece of the whole system per NFR-002 and R-001
+ * ("≥50 nhóm đồng thời đặt vào một slot cuối cùng"). {@link #book} is the one place that must not
+ * let two requests both believe they got the last seat; see {@link ScheduleSlotRepository#findByIdForUpdate}
+ * for the actual locking mechanism this method relies on.
+ */
+@Service
+@RequiredArgsConstructor
+public class BookingService {
+
+    private static final Duration LATE_CANCELLATION_WINDOW = Duration.ofHours(2);
+
+    private final BookingRepository bookingRepository;
+    private final ScheduleSlotRepository scheduleSlotRepository;
+    private final StudentGroupService studentGroupService;
+    private final AuditService auditService;
+
+    @Transactional
+    public Booking book(UUID slotId, BookRequest request, User actingUser) {
+        StudentGroup group = studentGroupService.getById(request.groupId());
+
+        // 5a in UC-002: one active booking per group at a time (see BookingRepository's javadoc for the
+        // "đợt kiểm tra" simplification this makes).
+        if (bookingRepository.existsByGroupIdAndBookingStatus(group.getId(), BookingStatus.CONFIRMED)) {
+            throw new BadRequestException("Group " + group.getGroupCode() + " already has an active booking");
+        }
+
+        // Row lock acquired here and held for the rest of this transaction: any other request racing for
+        // the same slot blocks at this line until we commit or roll back, instead of both proceeding on
+        // stale capacity numbers (5b in UC-002 / R-001's mitigation).
+        ScheduleSlot slot = scheduleSlotRepository.findByIdForUpdate(slotId)
+                .orElseThrow(() -> ResourceNotFoundException.of("ScheduleSlot", slotId));
+
+        if (!slot.hasCapacity()) {
+            throw new ConflictException("Slot " + slotId + " is already full");
+        }
+
+        slot.setBookedCount(slot.getBookedCount() + 1);
+        if (!slot.hasCapacity()) {
+            slot.setStatus(SlotStatus.FULL);
+        }
+
+        Booking booking = Booking.builder()
+                .slot(slot)
+                .group(group)
+                .bookingStatus(BookingStatus.CONFIRMED)
+                .bookedAt(Instant.now())
+                .notes(request.notes())
+                .build();
+        booking = bookingRepository.save(booking);
+
+        auditService.record("Booking", booking.getId(), AuditAction.CREATE, actingUser,
+                Map.of("slotId", slotId, "groupId", group.getId()));
+
+        return booking;
+    }
+
+    @Transactional
+    public void cancel(UUID bookingId, CancelBookingRequest request, User actingUser) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> ResourceNotFoundException.of("Booking", bookingId));
+
+        if (booking.getBookingStatus() != BookingStatus.CONFIRMED) {
+            throw new BadRequestException("Only a Confirmed booking can be cancelled");
+        }
+
+        // Re-lock the slot before touching its counters, for the same reason book() does.
+        ScheduleSlot slot = scheduleSlotRepository.findByIdForUpdate(booking.getSlot().getId())
+                .orElseThrow(() -> ResourceNotFoundException.of("ScheduleSlot", booking.getSlot().getId()));
+
+        if (Instant.now().isAfter(slot.getStartTime().minus(LATE_CANCELLATION_WINDOW))) {
+            throw new BadRequestException("Cannot cancel within 2 hours of the slot's start time (Late Cancellation)");
+        }
+
+        booking.setBookingStatus(BookingStatus.CANCELLED);
+        booking.setCancelledAt(Instant.now());
+
+        slot.setBookedCount(Math.max(0, slot.getBookedCount() - 1));
+        if (slot.getStatus() == SlotStatus.FULL && slot.hasCapacity()) {
+            slot.setStatus(SlotStatus.AVAILABLE);
+        }
+
+        auditService.record("Booking", booking.getId(), AuditAction.CANCEL, actingUser,
+                Map.of("reason", request.reason()));
+    }
+}
