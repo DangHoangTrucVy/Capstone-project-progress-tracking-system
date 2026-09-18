@@ -1,13 +1,46 @@
-# Capstone Tracking Backend
+# Capstone Project Progress Tracking System
+*(Student Schedule and Guidance Management System)*
 
-Spring Boot backend for the **Student Schedule and Guidance Management System**
-(see the project's `blueprint.md` for the full 15-section spec). This is the
-foundation the whole 5-sprint delivery plan (§12) builds on: every entity in the
-Data Model (§8) exists in code, Sprint 1 and Sprint 2 have full working
-service/controller layers, and Sprints 3–5 have their data layer ready so adding
-their business logic is additive, not a refactor.
+Hệ thống hỗ trợ quản lý lịch đánh giá, theo dõi tiến độ và giám sát hướng dẫn đồ án/khóa luận tốt nghiệp giữa Giảng viên hướng dẫn (Supervisor) và các nhóm sinh viên.
 
-## Stack
+---
+
+## 📌 Tài liệu dự án
+
+- 📄 [**Intent Specification (`intent.md`)**](intent.md): Bối cảnh bài toán, mô hình tham chiếu tương tự Calendly và kết quả kỳ vọng.
+- 📐 [**Software Development Blueprint (`blueprint.md`)**](blueprint.md): Bản vẽ kiến trúc & kỹ thuật chi tiết 15 mục (Requirements, Use Cases, User Stories, Data Model, API Contract, NFR, Traceability Matrix).
+- 🤖 [**BA Blueprint Agent Framework (`BA-Blueprint-Agent/`)**](BA-Blueprint-Agent/README.md): Bộ khung quản trị chất lượng (Quality Gates), 10 kỹ năng phân tích nghiệp vụ và quy trình đồng bộ GitHub Delivery.
+
+---
+
+## 🎯 Tính năng cốt lõi (Core Capabilities)
+
+1. **Lịch kiểm tra & đánh giá (Assessment Scheduling):** Đặt lịch tự động, kiểm soát sức chứa (capacity), loại bỏ 100% xung đột lịch theo mô hình Calendly.
+2. **Quản lý hồ sơ nhóm & nộp Artifacts:** Quản lý tập trung thành viên, đề tài và các sản phẩm bàn giao theo từng mốc.
+3. **Ngân hàng câu hỏi & tài liệu đề tài:** Kho học liệu và câu hỏi phản biện phân loại theo chuyên đề do Admin quản lý.
+4. **Hỗ trợ trong buổi làm việc & Biên bản họp:** Ghi nhận yêu cầu mới phát sinh (New Requirements) và tự động sinh bản thảo Biên bản cuộc họp (Meeting Minutes) từ ghi chú.
+5. **Đánh giá đa chiều (3-Dimensional Evaluation):** Chấm điểm và nhận xét theo 3 tiêu chí: *Topic Fit*, *Product Quality*, và *Communication*.
+6. **Báo cáo & Thống kê tiến độ:** Dashboard theo dõi phiên họp, tỷ lệ tham gia và rủi ro chậm trễ theo tuần và theo học kỳ.
+
+---
+
+## 👥 Nhóm phát triển
+
+- **Nhóm:** Group 2
+- **Môn học:** SWD / Capstone Project
+
+---
+
+## ⚙️ Backend Service (Spring Boot)
+
+Spring Boot backend cho **Student Schedule and Guidance Management System**
+(xem `blueprint.md` để biết đặc tả đầy đủ 15 mục). Đây là nền tảng cho toàn bộ
+kế hoạch triển khai 5 sprint (§12): mọi entity trong Data Model (§8) đã có
+trong code, Sprint 1 và Sprint 2 có đầy đủ service/controller, và Sprint 3–5
+đã có sẵn data layer để việc bổ sung business logic là cộng thêm chứ không
+phải refactor lại.
+
+### Stack
 
 - Java 17, Spring Boot 3.3.4, Maven
 - Spring Web, Spring Data JPA, Spring Security (stateless JWT)
@@ -16,7 +49,7 @@ their business logic is additive, not a refactor.
 - Lombok
 - JUnit 5 + MockMvc + H2 (test profile)
 
-## What's implemented
+### What's implemented
 
 | Sprint | Area | Endpoints | Status |
 |---|---|---|---|
@@ -42,7 +75,7 @@ the entity, a service that follows `BookingService`'s shape (validate → mutate
 `auditService.record(...)` inside the same `@Transactional`), and a controller whose
 `@PreAuthorize` matches the role column in blueprint.md §9's API contract.
 
-## Run it in IntelliJ IDEA
+### Run it in IntelliJ IDEA
 
 1. **Open the project**: `File → Open...` and select this folder (the one with `pom.xml`).
    IntelliJ detects it as a Maven project and downloads dependencies automatically —
@@ -82,7 +115,7 @@ password: Admin@123
 
 **Change or remove this seed account before any shared/deployed environment.**
 
-## Quick smoke test (curl)
+### Quick smoke test (curl)
 
 ```bash
 # 1. Log in as admin
@@ -104,7 +137,7 @@ curl -s -X POST http://localhost:8080/api/v1/slots \
 Booking itself needs a `GROUP_LEADER` token — see `BookingFlowIntegrationTest` for a
 full worked example (create instructor, group, leader, slot, then book/cancel).
 
-## Running tests
+### Running tests
 
 ```bash
 mvn test
@@ -125,7 +158,7 @@ so they don't need Postgres running.
 > first step after opening the project — if anything doesn't compile, it is most likely a
 > small dependency-version mismatch, easy to spot from the error and fix from there.
 
-## Design notes / where the blueprint mapped to code
+### Design notes / where the blueprint mapped to code
 
 - **NFR-002 / R-001 (no over-booking under concurrency)**: `ScheduleSlotRepository.findByIdForUpdate`
   takes a `SELECT ... FOR UPDATE` row lock, held for the rest of `BookingService.book()`'s transaction.
