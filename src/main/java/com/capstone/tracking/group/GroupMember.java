@@ -33,7 +33,9 @@ public class GroupMember extends BaseEntity {
     @JoinColumn(name = "group_id", nullable = false)
     private StudentGroup group;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    /** EAGER: GroupMemberResponse always reads userFullName/userEmail outside the service's
+     * transaction (open-in-view is disabled), so LAZY here throws LazyInitializationException. */
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

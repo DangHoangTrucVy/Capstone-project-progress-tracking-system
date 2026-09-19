@@ -6,7 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record StudentGroupUpdateRequest(
-        @NotNull UUID supervisorId,
+        UUID topicId,
+        UUID supervisorId,
         @NotNull GroupStatus status
 ) {
 }
