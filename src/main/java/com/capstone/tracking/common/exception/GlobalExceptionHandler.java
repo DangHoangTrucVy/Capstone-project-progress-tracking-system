@@ -6,9 +6,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -47,6 +49,20 @@ public class GlobalExceptionHandler {
         ErrorResponse body = ErrorResponse.of(HttpStatus.FORBIDDEN.value(), "FORBIDDEN",
                 "You do not have permission to perform this action", request.getRequestURI());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        ErrorResponse body = ErrorResponse.of(HttpStatus.NOT_FOUND.value(), "NOT_FOUND",
+                "No endpoint " + request.getMethod() + " " + request.getRequestURI(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        ErrorResponse body = ErrorResponse.of(HttpStatus.METHOD_NOT_ALLOWED.value(), "METHOD_NOT_ALLOWED",
+                ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
     }
 
     @ExceptionHandler(Exception.class)
