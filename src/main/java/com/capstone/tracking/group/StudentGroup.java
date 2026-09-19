@@ -30,12 +30,14 @@ public class StudentGroup extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String groupCode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_id", nullable = false)
+    /** EAGER: StudentGroupResponse always reads topicTitle/supervisorName outside the service's
+     * transaction (open-in-view is disabled), so LAZY here throws LazyInitializationException. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "topic_id")
     private Topic topic;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supervisor_id", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "supervisor_id")
     private User supervisor;
 
     /** e.g. "Fall2026" — matches C-001's 15-week semester framing. */

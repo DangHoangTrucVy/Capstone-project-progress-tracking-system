@@ -40,8 +40,10 @@ public class StudentGroupService {
         if (studentGroupRepository.existsByGroupCodeIgnoreCase(request.groupCode())) {
             throw new ConflictException("Group code " + request.groupCode() + " is already in use");
         }
-        Topic topic = topicService.getById(request.topicId());
-        User supervisor = requireRole(request.supervisorId(), Role.INSTRUCTOR, Role.ADMIN);
+        Topic topic = request.topicId() != null ? topicService.getById(request.topicId()) : null;
+        User supervisor = request.supervisorId() != null
+                ? requireRole(request.supervisorId(), Role.INSTRUCTOR, Role.ADMIN)
+                : null;
 
         StudentGroup group = StudentGroup.builder()
                 .groupCode(request.groupCode())
@@ -74,7 +76,12 @@ public class StudentGroupService {
     @Transactional
     public StudentGroup update(UUID id, StudentGroupUpdateRequest request) {
         StudentGroup group = getById(id);
-        group.setSupervisor(requireRole(request.supervisorId(), Role.INSTRUCTOR, Role.ADMIN));
+        if (request.topicId() != null) {
+            group.setTopic(topicService.getById(request.topicId()));
+        }
+        if (request.supervisorId() != null) {
+            group.setSupervisor(requireRole(request.supervisorId(), Role.INSTRUCTOR, Role.ADMIN));
+        }
         group.setStatus(request.status());
         return group;
     }

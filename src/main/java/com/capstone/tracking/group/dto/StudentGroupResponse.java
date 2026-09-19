@@ -22,7 +22,11 @@ public record StudentGroupResponse(
     }
 
     public static StudentGroupResponse from(StudentGroup g, List<GroupMemberResponse> members) {
-        return new StudentGroupResponse(g.getId(), g.getGroupCode(), g.getTopic().getId(), g.getTopic().getTitle(),
-                g.getSupervisor().getId(), g.getSupervisor().getFullName(), g.getSemester(), g.getStatus(), members);
+        UUID topicId = g.getTopic() != null ? g.getTopic().getId() : null;
+        String topicTitle = g.getTopic() != null ? g.getTopic().getTitle() : null;
+        UUID supervisorId = g.getSupervisor() != null ? g.getSupervisor().getId() : null;
+        String supervisorName = g.getSupervisor() != null ? g.getSupervisor().getFullName() : null;
+        return new StudentGroupResponse(g.getId(), g.getGroupCode(), topicId, topicTitle,
+                supervisorId, supervisorName, g.getSemester(), g.getStatus(), members);
     }
 }
