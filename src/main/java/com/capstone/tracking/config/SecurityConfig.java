@@ -26,7 +26,8 @@ import java.util.List;
  * Stateless JWT-based security matching blueprint.md §11:
  * - no HTTP session (every request carries its own Bearer token)
  * - RBAC enforced with @PreAuthorize at the controller layer (see UserController, method-security enabled below)
- * - /api/v1/auth/** and Swagger UI are the only endpoints reachable without a token
+ * - /api/v1/auth/register, /api/v1/auth/login, and Swagger UI are the only endpoints reachable without
+ *   a token (/api/v1/auth/me requires one, since it reads the caller's own identity)
  */
 @Configuration
 @EnableWebSecurity
@@ -41,7 +42,8 @@ public class SecurityConfig {
     private String allowedOrigins;
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/api/v1/auth/**",
+            "/api/v1/auth/register",
+            "/api/v1/auth/login",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
