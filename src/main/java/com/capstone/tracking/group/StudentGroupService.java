@@ -30,6 +30,8 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class StudentGroupService {
 
+    public static final int MAX_MEMBERS = 5;
+
     private final StudentGroupRepository studentGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final TopicService topicService;
@@ -122,6 +124,9 @@ public class StudentGroupService {
         }
         if (groupMemberRepository.existsByGroupIdAndUserIdAndStatus(groupId, user.getId(), MemberStatus.ACTIVE)) {
             throw new ConflictException("User " + user.getEmail() + " is already an active member of this group");
+        }
+        if (groupMemberRepository.countByGroupIdAndStatus(groupId, MemberStatus.ACTIVE) >= MAX_MEMBERS) {
+            throw new ConflictException("Group is full: a group can have at most " + MAX_MEMBERS + " members");
         }
         if (request.isLeader() && groupMemberRepository.existsByGroupIdAndIsLeaderTrueAndStatus(groupId, MemberStatus.ACTIVE)) {
             throw new ConflictException("This group already has an active leader; demote them before assigning a new one");
