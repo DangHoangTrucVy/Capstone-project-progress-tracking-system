@@ -18,20 +18,22 @@ import java.util.UUID;
 
 /**
  * FR-010: user management + RBAC (blueprint.md §6, §11).
- * Only Admin can create/list/edit accounts directly; every authenticated user can read their own profile
- * via /api/v1/auth/me (see AuthController) instead of this admin surface.
+ * Only Admin can create/edit accounts directly; every authenticated user can read their own profile
+ * via /api/v1/auth/me (see AuthController) instead of this admin surface. Listing/lookup is also open
+ * to Instructor/Group Leader, since group creation (StudentGroupController) needs to resolve
+ * candidate supervisors and members by role.
  */
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "Users", description = "Admin-only user account management")
+@Tag(name = "Users", description = "User account management")
 @SecurityRequirement(name = "bearerAuth")
-@PreAuthorize("hasRole('ADMIN')")
 public class UserController {
 
     private final UserService userService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserCreateRequest request) {
         User created = userService.create(request);
         return ResponseEntity.created(URI.create("/api/v1/users/" + created.getId()))
@@ -39,16 +41,19 @@ public class UserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','GROUP_LEADER')")
     public Page<UserResponse> list(@RequestParam(required = false) Role role, Pageable pageable) {
         return userService.list(role, pageable).map(UserResponse::from);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','GROUP_LEADER')")
     public UserResponse getById(@PathVariable UUID id) {
         return UserResponse.from(userService.getById(id));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UserUpdateRequest request) {
         return UserResponse.from(userService.update(id, request));
     }
