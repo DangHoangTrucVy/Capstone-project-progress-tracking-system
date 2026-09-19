@@ -5,6 +5,7 @@ import com.capstone.tracking.group.dto.GroupMemberResponse;
 import com.capstone.tracking.group.dto.StudentGroupCreateRequest;
 import com.capstone.tracking.group.dto.StudentGroupResponse;
 import com.capstone.tracking.group.dto.StudentGroupUpdateRequest;
+import com.capstone.tracking.user.User;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -31,9 +33,10 @@ public class StudentGroupController {
     private final StudentGroupService studentGroupService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<StudentGroupResponse> create(@Valid @RequestBody StudentGroupCreateRequest request) {
-        StudentGroup created = studentGroupService.create(request);
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
+    public ResponseEntity<StudentGroupResponse> create(@Valid @RequestBody StudentGroupCreateRequest request,
+                                                       @AuthenticationPrincipal User currentUser) {
+        StudentGroup created = studentGroupService.create(request, currentUser);
         return ResponseEntity.created(URI.create("/api/v1/groups/" + created.getId()))
                 .body(StudentGroupResponse.from(created));
     }

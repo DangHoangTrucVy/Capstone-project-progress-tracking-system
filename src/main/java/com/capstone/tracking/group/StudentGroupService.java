@@ -35,8 +35,17 @@ public class StudentGroupService {
     private final TopicService topicService;
     private final UserService userService;
 
+    /**
+     * A STUDENT creating a group becomes its leader: they are added as the active leader member and
+     * their global role is promoted to GROUP_LEADER. Admin/Instructor creations leave membership empty.
+     */
     @Transactional
-    public StudentGroup create(StudentGroupCreateRequest request) {
+    public StudentGroup create(StudentGroupCreateRequest request, User creator) {
+        boolean studentCreator = creator.getRole() == Role.STUDENT;
+        User leader = studentCreator ? userService.getById(creator.getId()) : null;
+        if (leader != null && groupMemberRepository.existsByUserIdAndStatus(leader.getId(), MemberStatus.ACTIVE)) {
+            throw new ConflictException("You already belong to a group and cannot create another one");
+        }
         if (studentGroupRepository.existsByGroupCodeIgnoreCase(request.groupCode())) {
             throw new ConflictException("Group code " + request.groupCode() + " is already in use");
         }
@@ -52,7 +61,19 @@ public class StudentGroupService {
                 .semester(request.semester())
                 .status(GroupStatus.FORMED)
                 .build();
-        return studentGroupRepository.save(group);
+        StudentGroup saved = studentGroupRepository.save(group);
+
+        if (leader != null) {
+            leader.setRole(Role.GROUP_LEADER);
+            groupMemberRepository.save(GroupMember.builder()
+                    .group(saved)
+                    .user(leader)
+                    .isLeader(true)
+                    .joinedAt(Instant.now())
+                    .status(MemberStatus.ACTIVE)
+                    .build());
+        }
+        return saved;
     }
 
     public StudentGroup getById(UUID id) {
