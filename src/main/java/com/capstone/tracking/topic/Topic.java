@@ -37,7 +37,10 @@ public class Topic extends BaseEntity {
 
     private String category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    /** EAGER: TopicResponse always reads adminName, and open-in-view is disabled (application.yml), so
+     * LAZY here throws LazyInitializationException once the controller maps the entity after the
+     * transactional service call returns. */
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "admin_id", nullable = false)
     private User admin;
 
